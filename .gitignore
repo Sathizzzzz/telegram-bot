@@ -1,0 +1,40 @@
+# Environment variables & secrets (CRITICAL: Never commit to Git)
+.env
+.env.local
+.env.*.local
+*.env
+
+# Local User Data, Invoices & SQLite Databases
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+.eggs/
+*.egg-info/
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Logs & Temporary files
+*.log
+scratch/
+
+# OS and Editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

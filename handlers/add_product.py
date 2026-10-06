@@ -143,7 +143,14 @@ async def start_add_product(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def handle_direct_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Triggered directly when user uploads a photo outside the menu."""
+    # A new photo always restarts the scan flow cleanly
+    context.user_data.clear()
     return await handle_invoice_photo(update, context)
+
+
+# Photos/documents are accepted in EVERY conversation state so a user who
+# sends a bill mid-flow never gets a silent no-response.
+PHOTO_ANY_STATE = MessageHandler(filters.PHOTO | filters.Document.ALL, handle_direct_photo)
 
 
 async def handle_invoice_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -780,32 +787,41 @@ def get_add_product_conversation_handler():
                 CommandHandler("skip_photo", skip_photo),
             ],
             WAITING_FOR_SMART_CONFIRM: [
+                PHOTO_ANY_STATE,
                 CallbackQueryHandler(handle_smart_confirm_callback, pattern="^(smart_confirm_save|smart_edit_details|cancel_action)"),
             ],
             WAITING_FOR_EDIT_CHOICE: [
+                PHOTO_ANY_STATE,
                 CallbackQueryHandler(handle_edit_choice_callback, pattern="^(edit_field:|smart_confirm_save|cancel_action)"),
             ],
             WAITING_FOR_SINGLE_FIELD_INPUT: [
+                PHOTO_ANY_STATE,
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_single_field_input),
                 CommandHandler("skip", skip_single_field),
             ],
             WAITING_FOR_NAME: [
+                PHOTO_ANY_STATE,
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_product_name),
             ],
             WAITING_FOR_CATEGORY: [
+                PHOTO_ANY_STATE,
                 CallbackQueryHandler(handle_category_callback, pattern="^cat:|^cancel_action"),
             ],
             WAITING_FOR_PLATFORM: [
+                PHOTO_ANY_STATE,
                 CallbackQueryHandler(handle_platform_callback, pattern="^plat:"),
             ],
             WAITING_FOR_DATE: [
+                PHOTO_ANY_STATE,
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_purchase_date),
             ],
             WAITING_FOR_WARRANTY: [
+                PHOTO_ANY_STATE,
                 CallbackQueryHandler(handle_warranty_callback, pattern="^warn:"),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_custom_warranty_months),
             ],
             WAITING_FOR_SERIAL: [
+                PHOTO_ANY_STATE,
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_serial_input),
                 CommandHandler("skip_serial", skip_serial),
             ],

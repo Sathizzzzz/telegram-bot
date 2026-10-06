@@ -1,8 +1,9 @@
 """
 AI Vision & OCR Service for ClaimSathi.
-Features dual-engine intelligence:
-1. Google Gemini API (multimodal vision) when GEMINI_API_KEY is configured.
-2. High-speed Local RapidOCR (ONNX runtime) that runs 100% locally on CPU with zero API keys needed!
+Features triple-engine intelligence (priority order):
+1. OpenRouter API (multimodal vision) — FREE tier, best accuracy, uses models like Gemini Flash & LLaMA Vision.
+2. Google Gemini API (multimodal vision) — fallback if GEMINI_API_KEY is configured.
+3. High-speed Local RapidOCR (ONNX runtime) — 100% offline, zero API keys, runs on CPU.
 """
 import os
 import json
@@ -413,3 +414,49 @@ def smart_fallback_analyzer(filename_or_text: str, caption: str = "", image_path
     # Secondary text/caption heuristic parser
     combined = f"{filename_or_text} {caption}".lower()
     return parse_ocr_text_to_product(combined, caption=caption)
+
+
+async def analyze_bill_image(image_path: Path, caption: str = "") -> Dict[str, Any]:
+    """
+    Master vision pipeline for ClaimSathi bill/invoice analysis.
+
+    Tries engines in this priority order:
+      1. OpenRouter (free vision models — best accuracy)
+      2. Google Gemini (if GEMINI_API_KEY is set)
+      3. Local RapidOCR + regex (always available, zero cost)
+
+    Args:
+        image_path: Path to the downloaded/saved invoice image.
+        caption:    Optional user note about the image.
+
+    Returns:
+        A structured dict with invoice fields (product_name, brand, warranty_months, etc.)
+    """
+    # --- Engine 1: OpenRouter (Priority) ---
+    try:
+        from services.openrouter_vision import analyze_image_with_openrouter
+        result = await analyze_image_with_openrouter(image_path, caption=caption)
+        if result and result.get("image_type") in ("INVOICE", "PRODUCT_LABEL", "DEFECT_ISSUE"):
+            logger.info("✅ OpenRouter vision engine succeeded.")
+            return result
+        elif result:
+            logger.info(f"OpenRouter returned image_type={result.get('image_type')} — continuing to next engine.")
+    except Exception as e:
+        logger.warning(f"OpenRouter engine error: {e}")
+
+    # --- Engine 2: Google Gemini (Fallback) ---
+    try:
+        result = await analyze_image_with_gemini(image_path, caption=caption)
+        if result and result.get("image_type") in ("INVOICE", "PRODUCT_LABEL", "DEFECT_ISSUE"):
+            logger.info("✅ Gemini vision engine succeeded.")
+            return result
+    except Exception as e:
+        logger.warning(f"Gemini engine error: {e}")
+
+    # --- Engine 3: Local RapidOCR + Regex (Always-On Fallback) ---
+    logger.info("Falling back to local RapidOCR + regex parser.")
+    return smart_fallback_analyzer(
+        filename_or_text=str(image_path.name),
+        caption=caption,
+        image_path=image_path,
+    )

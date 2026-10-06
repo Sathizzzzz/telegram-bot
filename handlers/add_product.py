@@ -22,7 +22,7 @@ from telegram.ext import (
 from config import INVOICE_STORAGE_DIR
 from database.db import get_db
 from database.models import User, ProductWarranty
-from services.ai_vision import analyze_image_with_gemini, smart_fallback_analyzer
+from services.ai_vision import analyze_bill_image
 from services.warranty_intelligence import analyze_claim_eligibility
 from services.supabase_storage import upload_invoice_to_supabase
 from handlers.claim_checker import render_claim_diagnosis_response
@@ -191,7 +191,7 @@ async def handle_invoice_photo(update: Update, context: ContextTypes.DEFAULT_TYP
         )
         return WAITING_FOR_PHOTO
 
-    # Check if Gemini Vision is available
+    # Run the triple-engine vision pipeline: OpenRouter → Gemini → Local OCR
     ai_data = None
     cloud_url = None
     if local_path and local_path.exists():
@@ -201,11 +201,12 @@ async def handle_invoice_photo(update: Update, context: ContextTypes.DEFAULT_TYP
             logger.warning(f"Supabase upload attempt failed: {e}")
 
     if local_path and local_path.exists() and local_path.suffix.lower() in [".jpg", ".jpeg", ".png", ".webp"]:
-        ai_data = await analyze_image_with_gemini(local_path, caption=caption)
+        ai_data = await analyze_bill_image(local_path, caption=caption)
 
-    # Use high-accuracy Local RapidOCR if Gemini is not configured or offline
+    # Last resort: caption/filename heuristic only (no image)
     if not ai_data:
         filename_hint = message.document.file_name if message.document else "invoice.jpg"
+        from services.ai_vision import smart_fallback_analyzer
         ai_data = smart_fallback_analyzer(filename_hint, caption=caption, image_path=local_path)
 
     # Detect if user uploaded a photo of a defect/broken item or asked a claim question

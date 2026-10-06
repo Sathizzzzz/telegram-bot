@@ -12,6 +12,11 @@ BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 # Optional Google Gemini API Key for Vision & OCR
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
+# OpenRouter API Key for AI Vision (Free tier available at openrouter.ai)
+# Supports: google/gemini-flash-1.5-8b, meta-llama/llama-3.2-11b-vision-instruct, etc.
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "google/gemini-flash-1.5-8b")
+
 # Database URL (Supports SQLite locally, and Supabase / PostgreSQL in Cloud)
 raw_db_url = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'data' / 'warranty_vault.db'}")
 if raw_db_url.startswith("postgres://"):
